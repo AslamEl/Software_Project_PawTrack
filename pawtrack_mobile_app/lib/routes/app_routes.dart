@@ -1,0 +1,79 @@
+import 'package:flutter/material.dart';
+import '../screens/onboarding_screen.dart';
+import '../screens/placeholder_screen.dart';
+import '../screens/splash_screen.dart';
+
+class AppRoutes {
+  static const splash = '/splash';
+  static const onboarding1 = '/onboarding-1';
+  static const onboarding2 = '/onboarding-2';
+  static const onboarding3 = '/onboarding-3';
+  static const login = '/login';
+  static const register = '/register';
+  static const home = '/home';
+  static const map = '/map';
+  static const report = '/report';
+  static const statusTagging = '/status-tagging';
+  static const reportConfirmed = '/report-confirmed';
+  static const dogDetail = '/dog-detail';
+  static const offerHelp = '/offer-help';
+  static const updateStatus = '/update-status';
+  static const notifications = '/notifications';
+  static const emergencyAlert = '/emergency-alert';
+  static const alertSettings = '/alert-settings';
+  static const communityFeed = '/community-feed';
+  static const postStory = '/post-story';
+  static const communityChat = '/community-chat';
+  static const userProfile = '/user-profile';
+  static const heroBadges = '/hero-badges';
+  static const leaderboard = '/leaderboard';
+  static const appSettings = '/app-settings';
+
+  static final Map<String, WidgetBuilder> routes = {
+    splash: (context) => const SplashScreen(),
+    onboarding1: (context) => const OnboardingScreen(
+          title: 'Track. Rescue. Repeat.',
+          description:
+              'Join the PawTrack community to help strays find safety faster.',
+          stepLabel: '01 / 03',
+        ),
+    onboarding2: (context) => const OnboardingScreen(
+          title: 'Report in Seconds',
+          description:
+              'Snap a photo, add notes, and pin the location on a live map.',
+          stepLabel: '02 / 03',
+        ),
+    onboarding3: (context) => const OnboardingScreen(
+          title: 'Be a Local Hero',
+          description:
+              'Offer food, shelter, or adoption with a single tap.',
+          stepLabel: '03 / 03',
+        ),
+    login: (context) => const PlaceholderScreen(title: 'Login'),
+    register: (context) => const PlaceholderScreen(title: 'Register'),
+    home: (context) => const PlaceholderScreen(title: 'Home Dashboard'),
+    map: (context) => const PlaceholderScreen(title: 'Live Map'),
+    report: (context) => const PlaceholderScreen(title: 'Report a Dog'),
+    statusTagging: (context) => const PlaceholderScreen(title: 'Status Tagging'),
+    reportConfirmed:
+        (context) => const PlaceholderScreen(title: 'Report Confirmed'),
+    dogDetail: (context) => const PlaceholderScreen(title: 'Dog Detail'),
+    offerHelp: (context) => const PlaceholderScreen(title: 'Offer Help'),
+    updateStatus: (context) => const PlaceholderScreen(title: 'Update Status'),
+    notifications:
+        (context) => const PlaceholderScreen(title: 'Notifications'),
+    emergencyAlert:
+        (context) => const PlaceholderScreen(title: 'Emergency Alert'),
+    alertSettings:
+        (context) => const PlaceholderScreen(title: 'Alert Settings'),
+    communityFeed:
+        (context) => const PlaceholderScreen(title: 'Community Feed'),
+    postStory: (context) => const PlaceholderScreen(title: 'Post a Story'),
+    communityChat:
+        (context) => const PlaceholderScreen(title: 'Community Chat'),
+    userProfile: (context) => const PlaceholderScreen(title: 'User Profile'),
+    heroBadges: (context) => const PlaceholderScreen(title: 'Hero Badges'),
+    leaderboard: (context) => const PlaceholderScreen(title: 'Leaderboard'),
+    appSettings: (context) => const PlaceholderScreen(title: 'App Settings'),
+  };
+}
