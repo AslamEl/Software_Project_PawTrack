@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import '../screens/forgot_password_screen.dart';
+import '../screens/password_reset_sent_screen.dart';
+import '../screens/login_screen.dart';
 import '../screens/onboarding_screen.dart';
 import '../screens/placeholder_screen.dart';
+import '../screens/register_screen.dart';
 import '../screens/splash_screen.dart';
+import '../screens/success_screen.dart';
 
 class AppRoutes {
   static const splash = '/splash';
@@ -10,6 +15,9 @@ class AppRoutes {
   static const onboarding3 = '/onboarding-3';
   static const login = '/login';
   static const register = '/register';
+    static const forgotPassword = '/forgot-password';
+    static const success = '/success';
+    static const resetSent = '/reset-sent';
   static const home = '/home';
   static const map = '/map';
   static const report = '/report';
@@ -49,8 +57,11 @@ class AppRoutes {
               'Offer food, shelter, or adoption with a single tap.',
           stepLabel: '03 / 03',
         ),
-    login: (context) => const PlaceholderScreen(title: 'Login'),
-    register: (context) => const PlaceholderScreen(title: 'Register'),
+    login: (context) => const LoginScreen(),
+    register: (context) => const RegisterScreen(),
+    forgotPassword: (context) => const ForgotPasswordScreen(),
+    success: (context) => const SuccessScreen(),
+    resetSent: (context) => const PasswordResetSentScreen(),
     home: (context) => const PlaceholderScreen(title: 'Home Dashboard'),
     map: (context) => const PlaceholderScreen(title: 'Live Map'),
     report: (context) => const PlaceholderScreen(title: 'Report a Dog'),

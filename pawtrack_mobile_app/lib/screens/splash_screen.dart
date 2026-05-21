@@ -85,24 +85,32 @@ class _BrandRow extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 44,
-          height: 44,
+          width: 52,
+          height: 52,
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [
+                Color(0x1AF58A1F),
+                Color(0x00FFFFFF),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
             color: AppColors.card,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border),
             boxShadow: [
               BoxShadow(
                 color: AppColors.orange.withOpacity(0.35),
-                blurRadius: 20,
+                blurRadius: 22,
                 offset: const Offset(0, 12),
               ),
             ],
           ),
-          child: Center(
-              child: Image.asset(
-                'assets/images/logo.png',
-                fit: BoxFit.contain,
-              ),
+          child: Image.asset(
+            'assets/images/logo.png',
+            fit: BoxFit.contain,
           ),
         ),
         const SizedBox(width: 12),
