@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import '../screens/forgot_password_screen.dart';
-import '../screens/password_reset_sent_screen.dart';
-import '../screens/login_screen.dart';
 import '../screens/onboarding_screen.dart';
 import '../screens/placeholder_screen.dart';
-import '../screens/register_screen.dart';
 import '../screens/splash_screen.dart';
+import '../screens/login_screen.dart';
+import '../screens/register_screen.dart';
+import '../screens/forgot_password_screen.dart';
+import '../screens/password_reset_sent_screen.dart';
 import '../screens/success_screen.dart';
 
 class AppRoutes {
@@ -15,9 +15,9 @@ class AppRoutes {
   static const onboarding3 = '/onboarding-3';
   static const login = '/login';
   static const register = '/register';
-    static const forgotPassword = '/forgot-password';
-    static const success = '/success';
-    static const resetSent = '/reset-sent';
+  static const forgotPassword = '/forgot-password';
+  static const success = '/success';
+  static const resetSent = '/reset-sent';
   static const home = '/home';
   static const map = '/map';
   static const report = '/report';

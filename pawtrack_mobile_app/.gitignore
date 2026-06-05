@@ -33,12 +33,6 @@ migrate_working_dir/
 /build/
 /coverage/
 
-# Firebase config (local environments)
-/android/app/google-services.json
-/ios/Runner/GoogleService-Info.plist
-/lib/firebase_options.dart
-/firebase.json
-
 # Symbolication related
 app.*.symbols
 
@@ -49,3 +43,11 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+android/app/google-services.json
+firebase.json
+ios/Runner/GoogleService-Info.plist
+lib/firebase_options.dart
+
+# Local development notes
+TODO.md

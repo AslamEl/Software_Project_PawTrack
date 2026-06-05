@@ -6,7 +6,6 @@ import '../routes/app_routes.dart';
 import '../theme/app_colors.dart';
 import '../widgets/pt_input_field.dart';
 import '../widgets/pt_primary_button.dart';
-import '../widgets/pt_secondary_button.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
