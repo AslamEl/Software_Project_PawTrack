@@ -126,19 +126,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.pushNamed(context, AppRoutes.report),
-        backgroundColor: AppColors.orange,
-        foregroundColor: Colors.white,
-        elevation: 10,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        icon: const Icon(Icons.add_rounded, size: 22),
-        label: const Text(
-          'Report a Dog',
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 }
