@@ -3,7 +3,9 @@ import 'routes/app_routes.dart';
 import 'theme/app_theme.dart';
 
 class PawTrackApp extends StatelessWidget {
-  const PawTrackApp({super.key});
+  const PawTrackApp({super.key, required this.initialRoute});
+
+  final String initialRoute;
 
   @override
   Widget build(BuildContext context) {
@@ -11,7 +13,7 @@ class PawTrackApp extends StatelessWidget {
       title: 'PawTrack',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      initialRoute: AppRoutes.splash,
+      initialRoute: initialRoute,
       routes: AppRoutes.routes,
     );
   }

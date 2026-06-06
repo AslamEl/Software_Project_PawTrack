@@ -7,6 +7,7 @@ import '../screens/register_screen.dart';
 import '../screens/forgot_password_screen.dart';
 import '../screens/password_reset_sent_screen.dart';
 import '../screens/success_screen.dart';
+import '../screens/main_shell.dart';
 
 class AppRoutes {
   static const splash = '/splash';
@@ -62,7 +63,7 @@ class AppRoutes {
     forgotPassword: (context) => const ForgotPasswordScreen(),
     success: (context) => const SuccessScreen(),
     resetSent: (context) => const PasswordResetSentScreen(),
-    home: (context) => const PlaceholderScreen(title: 'Home Dashboard'),
+    home: (context) => const MainShell(),
     map: (context) => const PlaceholderScreen(title: 'Live Map'),
     report: (context) => const PlaceholderScreen(title: 'Report a Dog'),
     statusTagging: (context) => const PlaceholderScreen(title: 'Status Tagging'),
