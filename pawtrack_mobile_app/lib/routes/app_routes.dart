@@ -8,6 +8,8 @@ import '../screens/forgot_password_screen.dart';
 import '../screens/password_reset_sent_screen.dart';
 import '../screens/success_screen.dart';
 import '../screens/main_shell.dart';
+import '../screens/report_form_screen.dart';
+import '../screens/report_confirmed_screen.dart';
 
 class AppRoutes {
   static const splash = '/splash';
@@ -40,24 +42,9 @@ class AppRoutes {
 
   static final Map<String, WidgetBuilder> routes = {
     splash: (context) => const SplashScreen(),
-    onboarding1: (context) => const OnboardingScreen(
-          title: 'Track. Rescue. Repeat.',
-          description:
-              'Join the PawTrack community to help strays find safety faster.',
-          stepLabel: '01 / 03',
-        ),
-    onboarding2: (context) => const OnboardingScreen(
-          title: 'Report in Seconds',
-          description:
-              'Snap a photo, add notes, and pin the location on a live map.',
-          stepLabel: '02 / 03',
-        ),
-    onboarding3: (context) => const OnboardingScreen(
-          title: 'Be a Local Hero',
-          description:
-              'Offer food, shelter, or adoption with a single tap.',
-          stepLabel: '03 / 03',
-        ),
+    onboarding1: (context) => const OnboardingScreen(),
+    onboarding2: (context) => const OnboardingScreen(),
+    onboarding3: (context) => const OnboardingScreen(),
     login: (context) => const LoginScreen(),
     register: (context) => const RegisterScreen(),
     forgotPassword: (context) => const ForgotPasswordScreen(),
@@ -65,10 +52,9 @@ class AppRoutes {
     resetSent: (context) => const PasswordResetSentScreen(),
     home: (context) => const MainShell(),
     map: (context) => const PlaceholderScreen(title: 'Live Map'),
-    report: (context) => const PlaceholderScreen(title: 'Report a Dog'),
+    report: (context) => const ReportFormScreen(),
     statusTagging: (context) => const PlaceholderScreen(title: 'Status Tagging'),
-    reportConfirmed:
-        (context) => const PlaceholderScreen(title: 'Report Confirmed'),
+    reportConfirmed: (context) => const ReportConfirmedScreen(),
     dogDetail: (context) => const PlaceholderScreen(title: 'Dog Detail'),
     offerHelp: (context) => const PlaceholderScreen(title: 'Offer Help'),
     updateStatus: (context) => const PlaceholderScreen(title: 'Update Status'),

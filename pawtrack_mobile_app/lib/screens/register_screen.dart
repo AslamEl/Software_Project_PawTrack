@@ -3,8 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../routes/app_routes.dart';
 import '../theme/app_colors.dart';
-import '../widgets/pt_input_field.dart';
-import '../widgets/pt_primary_button.dart';
+import '../theme/app_text_styles.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -16,166 +15,386 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   int _selectedRole = 0;
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
+  final _nameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  final _confirmCtrl = TextEditingController();
   bool _isSubmitting = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirm = true;
+
+  static const _roles = ['Citizen', 'Volunteer', 'NGO'];
+  static const _roleIcons = [
+    Icons.person_rounded,
+    Icons.volunteer_activism_rounded,
+    Icons.business_rounded,
+  ];
 
   @override
   void initState() {
     super.initState();
-    _phoneController.text = '+94 ';
+    _phoneCtrl.text = '+94 ';
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _phoneController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
+    _nameCtrl.dispose();
+    _emailCtrl.dispose();
+    _phoneCtrl.dispose();
+    _passwordCtrl.dispose();
+    _confirmCtrl.dispose();
     super.dispose();
   }
+
+  // ── Validators ─────────────────────────────────────────────────────────────
+
+  String? _emailValidator(String? v) {
+    final e = v?.trim() ?? '';
+    if (e.isEmpty) return 'Email is required.';
+    if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(e)) {
+      return 'Enter a valid email address.';
+    }
+    return null;
+  }
+
+  String? _passwordValidator(String? v) {
+    final p = v?.trim() ?? '';
+    if (p.isEmpty) return 'Password is required.';
+    if (p.length < 6) return 'Password must be at least 6 characters.';
+    return null;
+  }
+
+  String? _confirmValidator(String? v) {
+    if ((v?.trim() ?? '').isEmpty) return 'Please confirm your password.';
+    if (v?.trim() != _passwordCtrl.text.trim()) return 'Passwords do not match.';
+    return null;
+  }
+
+  String? _phoneValidator(String? v) {
+    final phone = v?.trim() ?? '';
+    if (phone.isEmpty) return 'Phone number is required.';
+    final normalized = phone.replaceAll(RegExp(r'\s+'), '');
+    if (!normalized.startsWith('+94')) return 'Use Sri Lankan format (+94).';
+    final digits = normalized.replaceAll(RegExp(r'\D'), '');
+    if (digits.length != 11) return 'Enter 9 digits after +94.';
+    return null;
+  }
+
+  // ── Firebase logic (unchanged) ─────────────────────────────────────────────
+
+  Future<void> _submitRegister() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    setState(() => _isSubmitting = true);
+    try {
+      final result = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: _emailCtrl.text.trim(),
+        password: _passwordCtrl.text.trim(),
+      );
+      await result.user?.updateDisplayName(_nameCtrl.text.trim());
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(result.user?.uid)
+          .set({
+        'uid': result.user?.uid,
+        'fullName': _nameCtrl.text.trim(),
+        'email': _emailCtrl.text.trim(),
+        'phone': _phoneCtrl.text.trim(),
+        'role': _roles[_selectedRole],
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, AppRoutes.home);
+    } on FirebaseAuthException catch (e) {
+      _snack(e.message ?? 'Registration failed.');
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  void _snack(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  // ── UI ─────────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.cream,
       body: Stack(
         children: [
-          const _AuthBackground(),
+          Positioned(
+            top: -60,
+            left: -50,
+            child: Container(
+              width: 220,
+              height: 220,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.orange.withOpacity(0.09),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -60,
+            right: -40,
+            child: Container(
+              width: 180,
+              height: 180,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.orange.withOpacity(0.06),
+              ),
+            ),
+          ),
           SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
               child: Form(
                 key: _formKey,
                 autovalidateMode: AutovalidateMode.onUserInteraction,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // Back + Logo row
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: AppColors.card,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: const Icon(Icons.arrow_back_rounded,
+                                color: AppColors.ink, size: 20),
+                          ),
+                        ),
+                        const Spacer(),
+                        Container(
+                          width: 44,
+                          height: 44,
+                          padding: const EdgeInsets.all(9),
+                          decoration: BoxDecoration(
+                            color: AppColors.card,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: AppColors.border),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.orange.withOpacity(0.22),
+                                blurRadius: 16,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: Image.asset('assets/images/logo.png',
+                              fit: BoxFit.contain),
+                        ),
+                        const Spacer(),
+                        const SizedBox(width: 40),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
                     Text(
                       'Create account',
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineMedium
-                          ?.copyWith(fontSize: 26),
+                      style: AppTextStyles.headlineLarge.copyWith(fontSize: 26),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Join PawTrack to help stray dogs',
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      'Join PawTrack to help stray dogs.',
+                      style: AppTextStyles.bodyMedium,
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 26),
-                    PtInputField(
-                      label: 'Full name',
-                      hintText: 'John Doe',
+                    const SizedBox(height: 28),
+
+                    // Full name
+                    _FieldLabel('Full name'),
+                    const SizedBox(height: 8),
+                    _AuthField(
+                      controller: _nameCtrl,
+                      hint: 'John Doe',
+                      icon: Icons.person_outline_rounded,
                       textInputAction: TextInputAction.next,
-                      controller: _nameController,
                     ),
                     const SizedBox(height: 16),
-                    PtInputField(
-                      label: 'Email address',
-                      hintText: 'you@email.com',
+
+                    // Email
+                    _FieldLabel('Email address'),
+                    const SizedBox(height: 8),
+                    _AuthField(
+                      controller: _emailCtrl,
+                      hint: 'you@email.com',
+                      icon: Icons.mail_outline_rounded,
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
                       validator: _emailValidator,
-                      controller: _emailController,
                     ),
                     const SizedBox(height: 16),
-                    PtInputField(
-                      label: 'Phone number',
-                      hintText: '+94 7x xxx xxxx',
+
+                    // Phone
+                    _FieldLabel('Phone number'),
+                    const SizedBox(height: 8),
+                    _AuthField(
+                      controller: _phoneCtrl,
+                      hint: '+94 7x xxx xxxx',
+                      icon: Icons.phone_outlined,
                       keyboardType: TextInputType.phone,
                       textInputAction: TextInputAction.next,
-                      controller: _phoneController,
                       validator: _phoneValidator,
                     ),
                     const SizedBox(height: 16),
-                    PtInputField(
-                      label: 'Password',
-                      hintText: 'Create a password',
-                      obscureText: true,
+
+                    // Password
+                    _FieldLabel('Password'),
+                    const SizedBox(height: 8),
+                    _AuthField(
+                      controller: _passwordCtrl,
+                      hint: 'Create a password',
+                      icon: Icons.lock_outline_rounded,
+                      obscureText: _obscurePassword,
                       validator: _passwordValidator,
-                      controller: _passwordController,
-                      showVisibilityToggle: true,
-                    ),
-                    const SizedBox(height: 16),
-                    PtInputField(
-                      label: 'Confirm password',
-                      hintText: 'Re-enter your password',
-                      obscureText: true,
-                      controller: _confirmPasswordController,
-                      showVisibilityToggle: true,
-                      validator: _confirmPasswordValidator,
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      'I want to join as...',
-                      style: Theme.of(context).textTheme.labelSmall,
-                    ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: List.generate(
-                        _roles.length,
-                        (index) => ChoiceChip(
-                          label: Text(_roles[index]),
-                          selected: _selectedRole == index,
-                          labelStyle: TextStyle(
-                            color: _selectedRole == index
-                                ? Colors.white
-                                : AppColors.ink,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          selectedColor: AppColors.orange,
-                          backgroundColor: AppColors.card,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: const BorderSide(color: AppColors.border),
-                          ),
-                          onSelected: (_) {
-                            setState(() {
-                              _selectedRole = index;
-                            });
-                          },
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: AppColors.muted,
+                          size: 20,
                         ),
+                        onPressed: () =>
+                            setState(() => _obscurePassword = !_obscurePassword),
                       ),
                     ),
-                    const SizedBox(height: 22),
+                    const SizedBox(height: 16),
+
+                    // Confirm password
+                    _FieldLabel('Confirm password'),
+                    const SizedBox(height: 8),
+                    _AuthField(
+                      controller: _confirmCtrl,
+                      hint: 'Re-enter your password',
+                      icon: Icons.lock_outline_rounded,
+                      obscureText: _obscureConfirm,
+                      validator: _confirmValidator,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscureConfirm
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: AppColors.muted,
+                          size: 20,
+                        ),
+                        onPressed: () =>
+                            setState(() => _obscureConfirm = !_obscureConfirm),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Role selector
+                    _FieldLabel('I want to join as...'),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: List.generate(_roles.length, (i) {
+                        final selected = _selectedRole == i;
+                        return Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _selectedRole = i),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              margin: EdgeInsets.only(
+                                  right: i < _roles.length - 1 ? 10 : 0),
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 14, horizontal: 8),
+                              decoration: BoxDecoration(
+                                color: selected
+                                    ? AppColors.orange
+                                    : AppColors.card,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: selected
+                                      ? AppColors.orange
+                                      : AppColors.border,
+                                  width: 1.5,
+                                ),
+                                boxShadow: selected
+                                    ? [
+                                        BoxShadow(
+                                          color: AppColors.orange
+                                              .withOpacity(0.30),
+                                          blurRadius: 12,
+                                          offset: const Offset(0, 4),
+                                        )
+                                      ]
+                                    : [],
+                              ),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    _roleIcons[i],
+                                    color: selected
+                                        ? Colors.white
+                                        : AppColors.muted,
+                                    size: 22,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    _roles[i],
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: selected
+                                          ? Colors.white
+                                          : AppColors.ink,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 24),
+
                     Text(
-                      'By continuing, you agree to PawTrack\'s terms and privacy policy.',
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.copyWith(fontSize: 12),
+                      'By continuing, you agree to PawTrack\'s Terms & Privacy Policy.',
+                      style: TextStyle(
+                          color: AppColors.muted, fontSize: 12, height: 1.5),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 16),
-                    PtPrimaryButton(
-                      label: 'Create account',
-                      onPressed: _isSubmitting ? null : () => _submitRegister(),
+                    const SizedBox(height: 20),
+
+                    _PrimaryBtn(
+                      label: 'Create Account',
+                      loading: _isSubmitting,
+                      onPressed: _submitRegister,
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 20),
+
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          'Already have an account?',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(color: AppColors.muted),
+                          'Already have an account?  ',
+                          style:
+                              TextStyle(color: AppColors.muted, fontSize: 14),
                         ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.pushReplacementNamed(
-                                context, AppRoutes.login);
-                          },
-                          child: const Text('Log in'),
+                        GestureDetector(
+                          onTap: () => Navigator.pushReplacementNamed(
+                              context, AppRoutes.login),
+                          child: const Text(
+                            'Sign in',
+                            style: TextStyle(
+                              color: AppColors.orange,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -188,126 +407,125 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
   }
+}
 
-  String? _emailValidator(String? value) {
-    final email = value?.trim() ?? '';
-    if (email.isEmpty) {
-      return 'Email is required.';
-    }
-    final regex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
-    if (!regex.hasMatch(email)) {
-      return 'Enter a valid email address.';
-    }
-    return null;
-  }
+// ── Local widget helpers ────────────────────────────────────────────────────
 
-  String? _passwordValidator(String? value) {
-    final password = value?.trim() ?? '';
-    if (password.isEmpty) {
-      return 'Password is required.';
-    }
-    if (password.length < 6) {
-      return 'Password must be at least 6 characters.';
-    }
-    return null;
-  }
+class _FieldLabel extends StatelessWidget {
+  const _FieldLabel(this.text);
+  final String text;
 
-  String? _confirmPasswordValidator(String? value) {
-    final confirm = value?.trim() ?? '';
-    if (confirm.isEmpty) {
-      return 'Please confirm your password.';
-    }
-    if (confirm != _passwordController.text.trim()) {
-      return 'Passwords do not match.';
-    }
-    return null;
-  }
-
-  String? _phoneValidator(String? value) {
-    final phone = value?.trim() ?? '';
-    if (phone.isEmpty) {
-      return 'Phone number is required.';
-    }
-    final normalized = phone.replaceAll(RegExp(r'\s+'), '');
-    if (!normalized.startsWith('+94')) {
-      return 'Use Sri Lankan format starting with +94.';
-    }
-    final digits = normalized.replaceAll(RegExp(r'\D'), '');
-    if (digits.length != 11) {
-      return 'Enter 9 digits after +94.';
-    }
-    return null;
-  }
-
-  Future<void> _submitRegister() async {
-    if (!(_formKey.currentState?.validate() ?? false)) {
-      _showMessage('Please enter a valid email.');
-      return;
-    }
-    setState(() {
-      _isSubmitting = true;
-    });
-    try {
-      final result = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+  @override
+  Widget build(BuildContext context) => Text(
+        text,
+        style: const TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: 13,
+          color: AppColors.ink,
+        ),
       );
-      await result.user?.updateDisplayName(_nameController.text.trim());
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(result.user?.uid)
-          .set({
-        'uid': result.user?.uid,
-        'fullName': _nameController.text.trim(),
-        'email': _emailController.text.trim(),
-        'phone': _phoneController.text.trim(),
-        'role': _roles[_selectedRole],
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-      if (!mounted) return;
-      Navigator.pushReplacementNamed(context, AppRoutes.success);
-    } on FirebaseAuthException catch (error) {
-      _showMessage(error.message ?? 'Registration failed.');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
-      }
-    }
-  }
+}
 
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+class _AuthField extends StatelessWidget {
+  const _AuthField({
+    required this.controller,
+    required this.hint,
+    required this.icon,
+    this.obscureText = false,
+    this.keyboardType,
+    this.textInputAction,
+    this.validator,
+    this.suffixIcon,
+  });
+
+  final TextEditingController controller;
+  final String hint;
+  final IconData icon;
+  final bool obscureText;
+  final TextInputType? keyboardType;
+  final TextInputAction? textInputAction;
+  final String? Function(String?)? validator;
+  final Widget? suffixIcon;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      textInputAction: textInputAction,
+      validator: validator,
+      style: const TextStyle(color: AppColors.ink, fontSize: 15),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(color: AppColors.muted, fontSize: 14),
+        prefixIcon: Icon(icon, color: AppColors.muted, size: 20),
+        suffixIcon: suffixIcon,
+        filled: true,
+        fillColor: AppColors.card,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.orange, width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFE53935), width: 1.5),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFE53935), width: 1.5),
+        ),
+      ),
     );
   }
 }
 
-const List<String> _roles = [
-  'Citizen',
-  'Volunteer',
-  'NGO',
-];
+class _PrimaryBtn extends StatelessWidget {
+  const _PrimaryBtn({
+    required this.label,
+    required this.loading,
+    required this.onPressed,
+  });
 
-class _AuthBackground extends StatelessWidget {
-  const _AuthBackground();
+  final String label;
+  final bool loading;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return Positioned.fill(
-      child: Container(
-        decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment(-0.7, -0.6),
-            radius: 1.4,
-            colors: [
-              Color(0x33F58A1F),
-              Color(0x00FFF3E8),
-            ],
-          ),
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: loading ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.orange,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: AppColors.orange.withOpacity(0.5),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14)),
+          elevation: 0,
         ),
+        child: loading
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                    color: Colors.white, strokeWidth: 2),
+              )
+            : Text(label,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w700, fontSize: 16)),
       ),
     );
   }
