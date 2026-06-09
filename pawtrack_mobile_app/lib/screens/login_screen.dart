@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../routes/app_routes.dart';
@@ -28,7 +29,18 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // ── Firebase logic (unchanged) ─────────────────────────────────────────────
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  Future<void> _saveFcmToken(String uid) async {
+    final token = await FirebaseMessaging.instance.getToken();
+    if (token == null) return;
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .set({'fcmToken': token}, SetOptions(merge: true));
+  }
+
+  // ── Firebase logic ─────────────────────────────────────────────────────────
 
   String? _emailValidator(String? v) {
     final e = v?.trim() ?? '';
@@ -50,10 +62,11 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _isSubmitting = true);
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailCtrl.text.trim(),
         password: _passwordCtrl.text.trim(),
       );
+      if (cred.user != null) await _saveFcmToken(cred.user!.uid);
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, AppRoutes.home);
     } on FirebaseAuthException catch (e) {
@@ -79,6 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
       await FirebaseAuth.instance.signInWithCredential(credential);
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
+        final token = await FirebaseMessaging.instance.getToken();
         await FirebaseFirestore.instance.collection('users').doc(user.uid).set(
           {
             'uid': user.uid,
@@ -88,6 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
             'role': 'Citizen',
             'createdAt': FieldValue.serverTimestamp(),
             'provider': 'google',
+            if (token != null) 'fcmToken': token,
           },
           SetOptions(merge: true),
         );

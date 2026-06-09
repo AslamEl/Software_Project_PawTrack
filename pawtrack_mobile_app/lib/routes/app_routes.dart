@@ -14,6 +14,9 @@ import '../screens/report_confirmed_screen.dart';
 import '../screens/dog_detail_screen.dart';
 import '../screens/offer_help_screen.dart';
 import '../screens/update_status_screen.dart';
+import '../screens/notifications_screen.dart';
+import '../screens/emergency_alert_screen.dart';
+import '../screens/alert_settings_screen.dart';
 
 class AppRoutes {
   static const splash = '/splash';
@@ -62,12 +65,9 @@ class AppRoutes {
     dogDetail: (context) => const DogDetailScreen(),
     offerHelp: (context) => const OfferHelpScreen(),
     updateStatus: (context) => const UpdateStatusScreen(),
-    notifications:
-        (context) => const PlaceholderScreen(title: 'Notifications'),
-    emergencyAlert:
-        (context) => const PlaceholderScreen(title: 'Emergency Alert'),
-    alertSettings:
-        (context) => const PlaceholderScreen(title: 'Alert Settings'),
+    notifications: (context) => const NotificationsScreen(),
+    emergencyAlert: (context) => const EmergencyAlertScreen(),
+    alertSettings: (context) => const AlertSettingsScreen(),
     communityFeed:
         (context) => const PlaceholderScreen(title: 'Community Feed'),
     postStory: (context) => const PlaceholderScreen(title: 'Post a Story'),
