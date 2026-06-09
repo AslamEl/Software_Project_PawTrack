@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import '../routes/app_routes.dart';
 import 'home_screen.dart';
+import 'map_screen.dart';
 import 'placeholder_screen.dart';
 import 'profile_screen.dart';
 
@@ -18,7 +19,7 @@ class _MainShellState extends State<MainShell> {
 
   static const List<Widget> _pages = [
     HomeScreen(),
-    PlaceholderScreen(title: 'Live Map'),
+    MapScreen(),
     SizedBox.shrink(), // Report navigates away via pushNamed
     PlaceholderScreen(title: 'Community'),
     ProfileScreen(),

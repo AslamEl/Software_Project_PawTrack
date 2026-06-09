@@ -49,5 +49,15 @@ firebase.json
 ios/Runner/GoogleService-Info.plist
 lib/firebase_options.dart
 
-# Local development notes
+# Local development notes & session compacts
 TODO.md
+compact.md
+
+# Android release signing (generated in Phase 10 — never commit)
+android/key.properties
+*.jks
+*.keystore
+
+# Cloudinary / API secrets if ever extracted to a file
+lib/config/secrets.dart
+lib/config/env.dart
