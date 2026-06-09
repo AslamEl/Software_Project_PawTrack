@@ -20,7 +20,7 @@ class _MainShellState extends State<MainShell> {
   static const List<Widget> _pages = [
     HomeScreen(),
     MapScreen(),
-    SizedBox.shrink(), // Report navigates away via pushNamed
+    SizedBox.shrink(), // Report tab navigates away via pushNamed
     PlaceholderScreen(title: 'Community'),
     ProfileScreen(),
   ];
@@ -48,6 +48,11 @@ class _MainShellState extends State<MainShell> {
   }
 }
 
+// ─── Bottom Navigation Bar ────────────────────────────────────────────────────
+// No transparent overhang — the entire widget is solid white so no background
+// bleeds through. The centre FAB stays inside the bar bounds and appears
+// elevated via its orange glow shadow.
+
 class _BottomNav extends StatelessWidget {
   const _BottomNav({required this.currentIndex, required this.onTap});
 
@@ -57,26 +62,59 @@ class _BottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: AppColors.card,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.orange.withOpacity(0.12),
-            blurRadius: 24,
-            offset: const Offset(0, -6),
+            color: Color(0x16000000),
+            blurRadius: 22,
+            offset: Offset(0, -4),
+          ),
+          // Soft orange halo
+          BoxShadow(
+            color: Color(0x09F58A1F),
+            blurRadius: 32,
+            offset: Offset(0, -2),
           ),
         ],
       ),
       child: SafeArea(
+        top: false,
         child: SizedBox(
-          height: 60,
+          height: 70,
           child: Row(
             children: [
-              _NavItem(icon: Icons.home_rounded, label: 'Home', index: 0, currentIndex: currentIndex, onTap: onTap),
-              _NavItem(icon: Icons.map_rounded, label: 'Map', index: 1, currentIndex: currentIndex, onTap: onTap),
-              _ReportNavItem(onTap: () => onTap(2)),
-              _NavItem(icon: Icons.forum_rounded, label: 'Community', index: 3, currentIndex: currentIndex, onTap: onTap),
-              _NavItem(icon: Icons.person_rounded, label: 'Profile', index: 4, currentIndex: currentIndex, onTap: onTap),
+              _NavItem(
+                icon: Icons.home_rounded,
+                label: 'Home',
+                index: 0,
+                current: currentIndex,
+                onTap: onTap,
+              ),
+              _NavItem(
+                icon: Icons.map_rounded,
+                label: 'Map',
+                index: 1,
+                current: currentIndex,
+                onTap: onTap,
+              ),
+              // Centre Report FAB — inside the bar, elevated with glow
+              _CenterFAB(onTap: () => onTap(2)),
+              _NavItem(
+                icon: Icons.forum_rounded,
+                label: 'Community',
+                index: 3,
+                current: currentIndex,
+                onTap: onTap,
+              ),
+              _NavItem(
+                icon: Icons.person_rounded,
+                label: 'Profile',
+                index: 4,
+                current: currentIndex,
+                onTap: onTap,
+              ),
             ],
           ),
         ),
@@ -85,82 +123,112 @@ class _BottomNav extends StatelessWidget {
   }
 }
 
-class _NavItem extends StatelessWidget {
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.index,
-    required this.currentIndex,
-    required this.onTap,
-  });
+// ─── Centre FAB ───────────────────────────────────────────────────────────────
 
-  final IconData icon;
-  final String label;
-  final int index;
-  final int currentIndex;
-  final ValueChanged<int> onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final selected = currentIndex == index;
-    return Expanded(
-      child: InkWell(
-        onTap: () => onTap(index),
-        splashColor: AppColors.orange.withOpacity(0.1),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 24, color: selected ? AppColors.orange : AppColors.muted),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                color: selected ? AppColors.orange : AppColors.muted,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ReportNavItem extends StatelessWidget {
-  const _ReportNavItem({required this.onTap});
+class _CenterFAB extends StatelessWidget {
+  const _CenterFAB({required this.onTap});
 
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: InkWell(
+      child: GestureDetector(
         onTap: onTap,
-        splashColor: AppColors.orange.withOpacity(0.1),
+        behavior: HitTestBehavior.opaque,
+        child: Center(
+          child: Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFFFFAA52), AppColors.orangeDeep],
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.orange.withOpacity(0.50),
+                  blurRadius: 18,
+                  spreadRadius: 0,
+                  offset: const Offset(0, 5),
+                ),
+                BoxShadow(
+                  color: AppColors.orange.withOpacity(0.20),
+                  blurRadius: 5,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.add_rounded,
+              color: Colors.white,
+              size: 28,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Nav Item ─────────────────────────────────────────────────────────────────
+
+class _NavItem extends StatelessWidget {
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    required this.index,
+    required this.current,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final int index;
+  final int current;
+  final ValueChanged<int> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = current == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => onTap(index),
+        behavior: HitTestBehavior.opaque,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 44,
-              height: 36,
+            // Pill indicator — background fades in when selected
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 230),
+              curve: Curves.easeInOut,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColors.orange,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.orange.withOpacity(0.4),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                color: selected
+                    ? AppColors.orange.withOpacity(0.13)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(22),
               ),
-              child: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
+              child: Icon(
+                icon,
+                size: 22,
+                color: selected ? AppColors.orange : AppColors.muted,
+              ),
             ),
             const SizedBox(height: 3),
-            const Text(
-              'Report',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.orange),
+            // Label — colour and weight animate
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 230),
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+                color: selected ? AppColors.orange : AppColors.muted,
+                letterSpacing: selected ? 0.2 : 0,
+              ),
+              child: Text(label),
             ),
           ],
         ),

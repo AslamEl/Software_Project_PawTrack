@@ -32,6 +32,15 @@ class _MapScreenState extends State<MapScreen> {
   RouteResult? _activeRoute;
   bool _isLoadingRoute = false;
 
+  // Zoom-adaptive pins
+  double _currentZoom = 14.0;
+
+  // Search state
+  bool _searchActive = false;
+  String _searchQuery = '';
+  final _searchController = TextEditingController();
+  final _searchFocus = FocusNode();
+
   static const _filterLabels = ['All', 'Hungry', 'Injured', 'Rescued', 'Stray'];
 
   @override
@@ -39,6 +48,20 @@ class _MapScreenState extends State<MapScreen> {
     super.initState();
     _dogsStream = _buildStream(null);
     _initLocation();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocus.dispose();
+    super.dispose();
+  }
+
+  // Maps a zoom level to a rendering band (0 = dot, 1 = ball+stick, 2 = full)
+  int _zoomBand(double zoom) {
+    if (zoom >= 13.5) return 2;
+    if (zoom >= 10.5) return 1;
+    return 0;
   }
 
   // ── Firestore stream ────────────────────────────────────────────────────────
@@ -147,6 +170,121 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  void _showFilterSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          return Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: EdgeInsets.fromLTRB(
+              20, 12, 20, MediaQuery.of(context).padding.bottom + 24,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40, height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE0E0E0),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Text('Filter Dogs',
+                        style: AppTextStyles.headlineMedium
+                            .copyWith(fontSize: 18)),
+                    const Spacer(),
+                    if (_activeFilter != null)
+                      GestureDetector(
+                        onTap: () {
+                          _setFilter(null);
+                          setModalState(() {});
+                        },
+                        child: Text(
+                          'Clear',
+                          style: TextStyle(
+                            color: AppColors.orange,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text('Show dogs with status:',
+                    style: TextStyle(color: AppColors.muted, fontSize: 13)),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: _filterLabels.where((l) => l != 'All').map((label) {
+                    final selected = _activeFilter == label;
+                    return GestureDetector(
+                      onTap: () {
+                        _setFilter(selected ? null : label);
+                        setModalState(() {});
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 18, vertical: 11),
+                        decoration: BoxDecoration(
+                          color: selected ? AppColors.orange : AppColors.cream,
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(
+                            color: selected ? AppColors.orange : AppColors.border,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: selected ? Colors.white : AppColors.ink,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.orange,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                    child: const Text('Apply',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 15)),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   void _showDogSheet(QueryDocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     final geoPoint = data['location'] as GeoPoint?;
@@ -174,8 +312,20 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   List<Marker> _buildMarkers(List<QueryDocumentSnapshot> docs) {
+    final band = _zoomBand(_currentZoom);
+    final double w = band == 2 ? 48 : (band == 1 ? 34 : 14);
+    final double h = band == 2 ? 64 : (band == 1 ? 46 : 14);
+    // Dot uses Alignment.center; pin tip is at bottom-center of CustomPaint bounds = GeoPoint.
+    final alignment = band == 0 ? Alignment.center : Alignment.bottomCenter;
+
     return docs.where((doc) {
-      return (doc.data() as Map<String, dynamic>)['location'] != null;
+      final data = doc.data() as Map<String, dynamic>;
+      if (data['location'] == null) return false;
+      if (_searchQuery.isNotEmpty) {
+        final name = (data['dogName'] as String? ?? '').toLowerCase();
+        if (!name.contains(_searchQuery.toLowerCase())) return false;
+      }
+      return true;
     }).map((doc) {
       final data = doc.data() as Map<String, dynamic>;
       final geo = data['location'] as GeoPoint;
@@ -187,12 +337,17 @@ class _MapScreenState extends State<MapScreen> {
           : <String>[];
       return Marker(
         point: LatLng(geo.latitude, geo.longitude),
-        width: 110,
-        height: 72,
-        alignment: Alignment.bottomCenter,
+        width: w,
+        height: h,
+        alignment: alignment,
         child: GestureDetector(
           onTap: () => _showDogSheet(doc),
-          child: _DogPin(urgency: urgency, name: name, statuses: statuses),
+          child: _DogPin(
+            urgency: urgency,
+            name: name,
+            statuses: statuses,
+            zoom: _currentZoom,
+          ),
         ),
       );
     }).toList();
@@ -219,6 +374,14 @@ class _MapScreenState extends State<MapScreen> {
                 _mapReady = true;
                 if (_userLocation != null) {
                   _mapController.move(_userLocation!, 15);
+                }
+              },
+              onMapEvent: (event) {
+                if (event is MapEventMove || event is MapEventMoveEnd) {
+                  final newZoom = event.camera.zoom;
+                  if (_zoomBand(newZoom) != _zoomBand(_currentZoom)) {
+                    setState(() => _currentZoom = newZoom);
+                  }
                 }
               },
             ),
@@ -336,17 +499,88 @@ class _MapScreenState extends State<MapScreen> {
               child: Row(
                 children: [
                   const SizedBox(width: 14),
-                  const Icon(Icons.search_rounded,
-                      color: AppColors.muted, size: 20),
+                  Icon(
+                    Icons.search_rounded,
+                    color: _searchActive ? AppColors.orange : AppColors.muted,
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
-                  Text('Search area...',
-                      style: AppTextStyles.bodyMedium.copyWith(fontSize: 14)),
-                  const Spacer(),
-                  Container(width: 1, height: 20, color: AppColors.border),
-                  const SizedBox(width: 12),
-                  const Icon(Icons.tune_rounded,
-                      color: AppColors.orange, size: 20),
-                  const SizedBox(width: 14),
+                  Expanded(
+                    child: _searchActive
+                        ? TextField(
+                            controller: _searchController,
+                            focusNode: _searchFocus,
+                            onChanged: (v) => setState(() => _searchQuery = v),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: AppColors.ink,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            decoration: const InputDecoration(
+                              hintText: 'Search dogs by name…',
+                              hintStyle: TextStyle(
+                                  fontSize: 14, color: AppColors.muted),
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          )
+                        : GestureDetector(
+                            onTap: () {
+                              setState(() => _searchActive = true);
+                              Future.delayed(
+                                const Duration(milliseconds: 50),
+                                _searchFocus.requestFocus,
+                              );
+                            },
+                            child: Text(
+                              'Search dogs by name…',
+                              style: AppTextStyles.bodyMedium
+                                  .copyWith(fontSize: 14),
+                            ),
+                          ),
+                  ),
+                  if (_searchActive && _searchQuery.isNotEmpty)
+                    GestureDetector(
+                      onTap: () {
+                        _searchController.clear();
+                        setState(() => _searchQuery = '');
+                      },
+                      child: const Icon(Icons.close_rounded,
+                          color: AppColors.muted, size: 18),
+                    ),
+                  if (_searchActive)
+                    GestureDetector(
+                      onTap: () {
+                        _searchFocus.unfocus();
+                        _searchController.clear();
+                        setState(() {
+                          _searchActive = false;
+                          _searchQuery = '';
+                        });
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(
+                            color: AppColors.orange,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    )
+                  else ...[
+                    Container(width: 1, height: 20, color: AppColors.border),
+                    const SizedBox(width: 12),
+                    GestureDetector(
+                      onTap: () => _showFilterSheet(context),
+                      child: const Icon(Icons.tune_rounded,
+                          color: AppColors.orange, size: 20),
+                    ),
+                    const SizedBox(width: 14),
+                  ],
                 ],
               ),
             ),
@@ -544,20 +778,22 @@ class _MapScreenState extends State<MapScreen> {
 }
 
 // ─── Dog Pin ──────────────────────────────────────────────────────────────────
-// Lollipop-style marker: info label on top, round ball, thin stick.
-// Marker uses alignment: Alignment.bottomCenter so the stick tip sits on the
-// exact reported GeoPoint. Whole pin is urgency-coloured; content is white.
+// CustomPaint fills the Marker bounds exactly. The tip is drawn at
+// (size.width/2, size.height) — flutter_map places that pixel on the GeoPoint
+// via Alignment.bottomCenter, so the pin never drifts at any zoom level.
 
 class _DogPin extends StatelessWidget {
   const _DogPin({
     required this.urgency,
     required this.name,
     this.statuses = const [],
+    this.zoom = 14.0,
   });
 
   final String urgency;
   final String name;
   final List<String> statuses;
+  final double zoom;
 
   Color get _pinColor {
     final lower = statuses.map((s) => s.toLowerCase()).toList();
@@ -568,7 +804,6 @@ class _DogPin extends StatelessWidget {
     if (lower.contains('hungry')) return AppColors.orange;
     if (lower.contains('stray')) return const Color(0xFF78909C);
     if (lower.contains('friendly')) return const Color(0xFF2196F3);
-    // Fallback to urgency
     if (urgency == 'high') return const Color(0xFFE53935);
     if (urgency == 'medium') return AppColors.orange;
     return const Color(0xFF43A047);
@@ -576,83 +811,136 @@ class _DogPin extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final displayName = name.isNotEmpty && name.toLowerCase() != 'unknown'
-        ? (name.length > 9 ? '${name.substring(0, 9)}…' : name)
-        : null;
-
     final color = _pinColor;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        // ── Info label (current card style, floating above the ball) ──────────
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: [
-              BoxShadow(
-                color: color.withValues(alpha: 0.42),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.pets_rounded, size: 12, color: Colors.white),
-              if (displayName != null) ...[
-                const SizedBox(width: 4),
-                Text(
-                  displayName,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ],
-          ),
+    // Very zoomed out: simple dot, Marker uses Alignment.center
+    if (zoom < 10.5) {
+      return Container(
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 1.5),
+          boxShadow: [
+            BoxShadow(color: color.withValues(alpha: 0.45), blurRadius: 3),
+          ],
         ),
-        const SizedBox(height: 3),
+      );
+    }
 
-        // ── Round ball ────────────────────────────────────────────────────────
-        Container(
-          width: 22,
-          height: 22,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 2.5),
-            boxShadow: [
-              BoxShadow(
-                color: color.withValues(alpha: 0.55),
-                blurRadius: 8,
-                spreadRadius: 1,
-              ),
-            ],
-          ),
-        ),
-
-        // ── Stick / stem ──────────────────────────────────────────────────────
-        Container(
-          width: 3,
-          height: 16,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(2),
-              bottomRight: Radius.circular(2),
-            ),
-          ),
-        ),
-      ],
+    // 3D pin — tip drawn at bottom-center of bounds = GeoPoint
+    return CustomPaint(
+      painter: _Pin3DPainter(color: color, showIcon: zoom >= 13.5),
     );
   }
+}
+
+// ─── 3D Pin Painter ───────────────────────────────────────────────────────────
+// Tip is explicitly drawn at (cx, size.height) which flutter_map maps to the
+// GeoPoint via Alignment.bottomCenter — pin is anchored at every zoom level.
+
+class _Pin3DPainter extends CustomPainter {
+  const _Pin3DPainter({required this.color, required this.showIcon});
+  final Color color;
+  final bool showIcon;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final r = size.width * 0.43;
+    final cy = r + 1.0;
+    final tipY = size.height;
+
+    final hsl = HSLColor.fromColor(color);
+    final lightC = hsl
+        .withLightness((hsl.lightness + 0.22).clamp(0.0, 1.0))
+        .withSaturation((hsl.saturation - 0.08).clamp(0.0, 1.0))
+        .toColor();
+    final darkC = hsl
+        .withLightness((hsl.lightness - 0.2).clamp(0.0, 1.0))
+        .toColor();
+    final tailC = hsl
+        .withLightness((hsl.lightness - 0.14).clamp(0.0, 1.0))
+        .toColor();
+
+    // ── Drop shadow ────────────────────────────────────────────────────────────
+    final shadowPath = Path.combine(
+      PathOperation.union,
+      Path()..addOval(Rect.fromCircle(center: Offset(cx, cy), radius: r)),
+      Path()
+        ..moveTo(cx - r * 0.36, cy + r * 0.7)
+        ..lineTo(cx, tipY)
+        ..lineTo(cx + r * 0.36, cy + r * 0.7)
+        ..close(),
+    );
+    canvas.drawShadow(shadowPath, Colors.black.withOpacity(0.32), 5, true);
+
+    // ── Tail (darker shade, drawn first so circle overlaps its top) ────────────
+    final tailPath = Path()
+      ..moveTo(cx - r * 0.36, cy + r * 0.72)
+      ..lineTo(cx, tipY)
+      ..lineTo(cx + r * 0.36, cy + r * 0.72)
+      ..close();
+    canvas.drawPath(tailPath, Paint()..color = tailC..style = PaintingStyle.fill);
+
+    // ── Circle with radial gradient (3-D sphere illusion) ─────────────────────
+    final circleRect = Rect.fromCircle(center: Offset(cx, cy), radius: r);
+    canvas.drawCircle(
+      Offset(cx, cy),
+      r,
+      Paint()
+        ..style = PaintingStyle.fill
+        ..shader = RadialGradient(
+          center: const Alignment(-0.35, -0.42),
+          radius: 0.88,
+          colors: [lightC, color, darkC],
+          stops: const [0.0, 0.52, 1.0],
+        ).createShader(circleRect),
+    );
+
+    // ── Rim ────────────────────────────────────────────────────────────────────
+    canvas.drawCircle(
+      Offset(cx, cy),
+      r,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..color = Colors.black.withOpacity(0.10)
+        ..strokeWidth = 0.7,
+    );
+
+    // ── Specular highlight ─────────────────────────────────────────────────────
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(cx - r * 0.21, cy - r * 0.27),
+        width: r * 0.52,
+        height: r * 0.33,
+      ),
+      Paint()
+        ..style = PaintingStyle.fill
+        ..color = Colors.white.withOpacity(0.46)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5),
+    );
+
+    // ── Paw icon (Material icon rendered as text glyph) ────────────────────────
+    if (showIcon) {
+      final tp = TextPainter(
+        text: TextSpan(
+          text: String.fromCharCode(Icons.pets_rounded.codePoint),
+          style: TextStyle(
+            fontSize: r * 0.9,
+            fontFamily: Icons.pets_rounded.fontFamily,
+            package: Icons.pets_rounded.fontPackage,
+            color: Colors.white.withOpacity(0.88),
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, Offset(cx - tp.width / 2, cy - tp.height / 2));
+    }
+  }
+
+  @override
+  bool shouldRepaint(_Pin3DPainter old) =>
+      old.color != color || old.showIcon != showIcon;
 }
 
 // ─── Route Info Card ──────────────────────────────────────────────────────────
