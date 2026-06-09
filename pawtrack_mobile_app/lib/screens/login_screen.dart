@@ -5,6 +5,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../routes/app_routes.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import '../utils/toast.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -56,7 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, AppRoutes.home);
     } on FirebaseAuthException catch (e) {
-      _snack(e.message ?? 'Login failed.');
+      AppToast.error(context, e.message ?? 'Login failed.');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -67,7 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final googleUser = await GoogleSignIn().signIn();
       if (googleUser == null) {
-        _snack('Google sign-in cancelled.');
+        AppToast.info(context, 'Google sign-in cancelled.');
         return;
       }
       final googleAuth = await googleUser.authentication;
@@ -94,15 +95,10 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, AppRoutes.home);
     } on FirebaseAuthException catch (e) {
-      _snack(e.message ?? 'Google sign-in failed.');
+      AppToast.error(context, e.message ?? 'Google sign-in failed.');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
-  }
-
-  void _snack(String msg) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg)));
   }
 
   // ── UI ─────────────────────────────────────────────────────────────────────

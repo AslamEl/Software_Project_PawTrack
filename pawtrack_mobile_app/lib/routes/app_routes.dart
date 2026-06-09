@@ -11,6 +11,9 @@ import '../screens/main_shell.dart';
 import '../screens/map_screen.dart';
 import '../screens/report_form_screen.dart';
 import '../screens/report_confirmed_screen.dart';
+import '../screens/dog_detail_screen.dart';
+import '../screens/offer_help_screen.dart';
+import '../screens/update_status_screen.dart';
 
 class AppRoutes {
   static const splash = '/splash';
@@ -56,9 +59,9 @@ class AppRoutes {
     report: (context) => const ReportFormScreen(),
     statusTagging: (context) => const PlaceholderScreen(title: 'Status Tagging'),
     reportConfirmed: (context) => const ReportConfirmedScreen(),
-    dogDetail: (context) => const PlaceholderScreen(title: 'Dog Detail'),
-    offerHelp: (context) => const PlaceholderScreen(title: 'Offer Help'),
-    updateStatus: (context) => const PlaceholderScreen(title: 'Update Status'),
+    dogDetail: (context) => const DogDetailScreen(),
+    offerHelp: (context) => const OfferHelpScreen(),
+    updateStatus: (context) => const UpdateStatusScreen(),
     notifications:
         (context) => const PlaceholderScreen(title: 'Notifications'),
     emergencyAlert:

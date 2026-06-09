@@ -6,6 +6,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import '../utils/toast.dart';
 import 'status_tagging_screen.dart';
 
 class ReportFormScreen extends StatefulWidget {
@@ -121,15 +122,11 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
 
   void _next() {
     if (_photo == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add a photo of the dog')),
-      );
+      AppToast.warning(context, 'Please add a photo of the dog');
       return;
     }
     if (_location == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Waiting for location. Please try again in a moment.')),
-      );
+      AppToast.warning(context, 'Waiting for location. Please try again in a moment.');
       return;
     }
     Navigator.push(

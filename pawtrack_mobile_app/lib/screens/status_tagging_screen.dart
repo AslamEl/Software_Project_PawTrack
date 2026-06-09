@@ -9,6 +9,7 @@ import 'package:latlong2/latlong.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../routes/app_routes.dart';
+import '../utils/toast.dart';
 
 // Replace with your Cloudinary cloud name and unsigned upload preset
 const _cloudinaryCloudName = 'dforjdpi8';
@@ -71,9 +72,7 @@ class _StatusTaggingScreenState extends State<StatusTaggingScreen> {
 
   Future<void> _submit() async {
     if (_selectedStatuses.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select at least one status')),
-      );
+      AppToast.warning(context, 'Please select at least one status');
       return;
     }
     setState(() => _submitting = true);
@@ -110,9 +109,7 @@ class _StatusTaggingScreenState extends State<StatusTaggingScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _submitting = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to submit: $e')),
-        );
+        AppToast.error(context, 'Failed to submit: $e');
       }
     }
   }

@@ -8,6 +8,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../routes/app_routes.dart';
 import '../services/routing_service.dart';
+import '../utils/toast.dart';
 
 const _kDefaultCenter = LatLng(6.9271, 79.8612); // Colombo, Sri Lanka
 
@@ -91,9 +92,7 @@ class _MapScreenState extends State<MapScreen> {
   }) async {
     if (_userLocation == null) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enable location to get directions.')),
-      );
+      AppToast.info(context, 'Enable location to get directions.');
       return;
     }
 
@@ -113,9 +112,7 @@ class _MapScreenState extends State<MapScreen> {
 
     if (result == null) {
       setState(() => _isLoadingRoute = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not calculate route. Try again.')),
-      );
+      AppToast.error(context, 'Could not calculate route. Try again.');
       return;
     }
 
@@ -184,6 +181,10 @@ class _MapScreenState extends State<MapScreen> {
       final geo = data['location'] as GeoPoint;
       final urgency = (data['urgency'] as String? ?? 'low').toLowerCase();
       final name = (data['dogName'] as String?) ?? '';
+      final statusRaw = data['status'];
+      final statuses = statusRaw is List
+          ? List<String>.from(statusRaw)
+          : <String>[];
       return Marker(
         point: LatLng(geo.latitude, geo.longitude),
         width: 110,
@@ -191,7 +192,7 @@ class _MapScreenState extends State<MapScreen> {
         alignment: Alignment.bottomCenter,
         child: GestureDetector(
           onTap: () => _showDogSheet(doc),
-          child: _DogPin(urgency: urgency, name: name),
+          child: _DogPin(urgency: urgency, name: name, statuses: statuses),
         ),
       );
     }).toList();
@@ -548,12 +549,26 @@ class _MapScreenState extends State<MapScreen> {
 // exact reported GeoPoint. Whole pin is urgency-coloured; content is white.
 
 class _DogPin extends StatelessWidget {
-  const _DogPin({required this.urgency, required this.name});
+  const _DogPin({
+    required this.urgency,
+    required this.name,
+    this.statuses = const [],
+  });
 
   final String urgency;
   final String name;
+  final List<String> statuses;
 
   Color get _pinColor {
+    final lower = statuses.map((s) => s.toLowerCase()).toList();
+    if (lower.contains('rescued')) return const Color(0xFF43A047);
+    if (lower.contains('injured') || lower.contains('needs rescue')) {
+      return const Color(0xFFE53935);
+    }
+    if (lower.contains('hungry')) return AppColors.orange;
+    if (lower.contains('stray')) return const Color(0xFF78909C);
+    if (lower.contains('friendly')) return const Color(0xFF2196F3);
+    // Fallback to urgency
     if (urgency == 'high') return const Color(0xFFE53935);
     if (urgency == 'medium') return AppColors.orange;
     return const Color(0xFF43A047);

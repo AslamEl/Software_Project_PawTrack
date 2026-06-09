@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../routes/app_routes.dart';
+import '../utils/toast.dart';
 import '../widgets/pt_input_field.dart';
 import '../widgets/pt_primary_button.dart';
 import '../widgets/pt_secondary_button.dart';
@@ -111,7 +112,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   Future<void> _sendResetLink() async {
     if (!(_formKey.currentState?.validate() ?? false)) {
-      _showMessage('Please enter a valid email.');
+      AppToast.warning(context, 'Please enter a valid email.');
       return;
     }
     setState(() {
@@ -123,7 +124,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, AppRoutes.resetSent);
     } on FirebaseAuthException catch (error) {
-      _showMessage(error.message ?? 'Failed to send reset link.');
+      AppToast.error(context, error.message ?? 'Failed to send reset link.');
     } finally {
       if (mounted) {
         setState(() {
@@ -131,11 +132,5 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         });
       }
     }
-  }
-
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
   }
 }
